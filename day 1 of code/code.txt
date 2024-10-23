@@ -1,0 +1,168 @@
+▶️Auth App index.js code
+
+const express = require('express');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = "windowsmacos";
+const app = express();
+
+app.use(express.json());
+
+
+
+const users = [];
+
+app.get("/", logger, function(req, res){
+    res.sendFile(__dirname + "/public/index.html");
+})
+
+app.post("/signup", logger, function(req, res){
+    const username = req.body.username;
+    const password = req.body.password;
+
+    users.push({
+        username: username,
+        password: password
+    })
+
+    res.json({
+        message: "You are signed up"
+    })
+    console.log(users);
+})
+
+app.post("/signin", logger, function(req, res){
+    const username = req.body.username;
+    const password = req.body.password;
+
+    let foundUser = null;
+
+    for (let i=0; i<users.length; i++) {
+        if (users[i].username == username && users[i].password == password) {
+            foundUser = users[i]
+        }
+    }
+
+    if (foundUser){
+        const token = jwt.sign({
+            username: username
+        },JWT_SECRET); //convert username to a jwt
+        // foundUser.token = token;
+        res.header("jwt",token);
+        res.json({
+            token: token
+        })
+    }else {
+        res.status(403).send({
+            message: "Invalid username or password"
+        })
+    }
+    console.log(users);
+})
+
+function logger(req, res,next){
+    console.log(req.method + " request came");
+    next();
+}
+
+function auth(req, res, next){
+    const token =req.headers.token; //jwt
+    const decodedInfomation = jwt.verify(token, JWT_SECRET);
+    if (decodedInfomation.username){
+        req.username = decodedInfomation.username;
+        next();
+    } else {
+        res.json({
+            message: "You are not logged in"
+        })
+    }  
+}
+
+app.get("/me", logger, auth, function(req, res){
+
+    let foundUser = null;
+
+    for (let i=0; i<users.length; i++) {
+        if (users[i].username == req.username) {
+            foundUser = users[i]
+        }
+    }
+
+    res.json({
+        username: foundUser.username,
+        password: foundUser.password
+    })
+    
+})
+
+app.listen(3000);
+
+_______________________________________________________________________________________
+
+▶️Auth App index.html code
+
+<html>
+    <head>
+        <title>Auth website</title>
+    </head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"></script>
+    <script>
+        async function signup(){
+            const username = document.getElementById("signup-username").value;
+            const password = document.getElementById("signup-password").value;
+            await axios.post("http://localhost:3000/signup", {
+                username: username,
+                password: password
+            })
+            alert("You are signed in");
+        }
+
+        async function signin(){
+            const username = document.getElementById("signin-username").value;
+            const password = document.getElementById("signin-password").value;
+            const response = await axios.post("http://localhost:3000/signin", {
+                username: username,
+                password: password
+            })
+
+            localStorage.setItem("token", response.data.token);
+
+            alert("You are signed in");
+        }
+
+        async function getUserInformation() {
+            const response = await axios.get("http://localhost:3000/me",{
+                headers: {
+                    token:localStorage.getItem("token")
+                }
+            })
+            document.getElementById("information").innerHTML="Username: "+response.data.username + " Password: "+ response.data.password
+        }
+        getUserInformation();
+
+        function logout(){
+            localStorage.removeItem("token");
+        }
+    </script>
+    <body>
+        <div>
+            Signup
+            <input id="signup-username" type="text" name="username" placeholder="Username">
+            <input id="signup-password" type="password" name="password" placeholder="Password">
+            <button onclick="signup()">Submit</button>
+        </div> 
+        <div>
+            Signin
+            <input id="signin-username" type="text" name="username" placeholder="Username">
+            <input id="signin-password" type="password" name="password" placeholder="Password">
+            <button onclick="signin()">Submit</button>
+        </div>
+        <div>
+            User information: 
+            <div id="information"></div>
+        </div>
+        <div>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </body>
+</html>
