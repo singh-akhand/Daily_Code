@@ -1,0 +1,173 @@
+const express = require("express");
+const app = express();
+
+//using req.query
+app.get("/sum", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a+b
+    })
+})
+
+//using req.params
+app.get("/multiply/:a/:b", function(req,res){
+    const a= parseInt(req.params.a);
+    const b= parseInt(req.params.b);
+    res.json({
+        answer: a*b
+    })
+})
+
+app.get("/divide", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a/b
+    })
+})
+
+app.get("/subtract", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a-b
+    })
+})
+
+app.listen(3000);
+
+
+_______________________________________________________
+
+▶️REQUEST COUNT OF CALCULATOR USING MIDDLEWARES
+
+const express = require("express");
+const app = express();
+
+let requestCount = 0;
+
+function requestIncreaser(req,res,next){
+    requestCount+=1;
+    console.log(`Total number of request = ${requestCount}`);
+    next();
+}
+
+app.get("/admin", function(req,res){
+    res.send(`Total number of request = ${requestCount}`)
+})
+
+app.use(requestIncreaser)
+// better routing, add database, middlewares
+app.get("/sum", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a+b
+    })
+})
+
+
+app.get("/multiply/:a/:b", function(req,res){
+    const a= parseInt(req.params.a);
+    const b= parseInt(req.params.b);
+    res.json({
+        answer: a*b
+    })
+})
+
+app.get("/divide", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a/b
+    })
+})
+
+app.get("/subtract", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a-b
+    })
+})
+
+app.listen(3000);
+
+_______________________________________________________
+
+▶️LOG METHOD, TIMESTAMP & HOSTNAME USING MIDDLEWARES
+
+const express = require("express");
+const app = express();
+
+function loggerMiddleware(req,res,next){
+    console.log(`Method is ${req.method}`);
+    console.log(`Host is ${req.hostname}`);
+    console.log(new Date());
+    next();
+}
+    
+app.use(loggerMiddleware)
+
+app.get("/sum", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a+b
+    })
+})
+
+
+app.get("/multiply/:a/:b", function(req,res){
+    const a= parseInt(req.params.a);
+    const b= parseInt(req.params.b);
+    res.json({
+        answer: a*b
+    })
+})
+
+app.get("/divide", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a/b
+    })
+})
+
+app.get("/subtract", function(req,res){
+    const a= parseInt(req.query.a);
+    const b= parseInt(req.query.b);
+    res.json({
+        answer: a-b
+    })
+})
+
+app.listen(3000);
+
+_______________________________________________________
+
+▶️POST JSON DATA 
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const app = express();
+
+// in Express, if we wants to pass json data,
+// we need to first parse the json data
+
+
+    
+//app.use(express.json())
+app.use(bodyParser.json())
+
+app.post("/sum", function(req,res){
+    console.log(req.body)
+    const a= parseInt(req.body.a);
+    const b= parseInt(req.body.b);
+    res.json({
+        answer: a+b
+    })
+})
+
+app.listen(3000);
