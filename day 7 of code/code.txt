@@ -1,0 +1,237 @@
+▶ BACKEND OF COURSE SELLING APP (part 2nd)
+
+▶️ user.js file
+// adding code to previous file
+
+const { Router } = require("express");
+const { userModel, purchaseModel, courseModel } = require("../db");
+const jwt = require("jsonwebtoken");
+const { JWT_USER_PASSWORD } = require("../config");
+const { userMiddleware } = require("../middleware/user");
+
+const userRouter = Router();
+
+userRouter.get("/purchases", userMiddleware, async function(req, res){
+    const userId = req.userId;
+
+    const purchases = await purchaseModel.find({
+        userId
+    });
+
+    const courseData = await courseModel.find({
+        _id: { $in: purchases.map(x => x.courseId) }
+    });
+
+    res.json({
+        purchases,
+        courseData
+    })
+})
+
+module.exports = {
+    userRouter: userRouter
+}
+
+_____________________________________________________________________________
+
+▶️ admin.js file
+
+const { Router } = require("express");
+const adminRouter = Router();
+const jwt = require("jsonwebtoken");
+const { adminModel, courseModel } = require("../db");
+const { JWT_ADMIN_PASSWORD } = require("../config");
+const { adminMiddleware } = require("../middleware/admin");
+
+adminRouter.post("/signup", async function(req, res){
+    const { email, password, firstName, lastName } = req.body;
+    //zod validation
+    // hashing password before storing as plaintext  need #bcrypt library
+
+    try {
+        await adminModel.create({
+            email: email,
+            password: password,
+            firstName: firstName,
+            lastName: lastName
+        })
+    } catch(e){
+        console.error("failed to signup!", e);
+    };
+
+    res.json({
+        message:"signup succeeded",
+    });
+})
+
+adminRouter.post("/signin", async function(req, res){
+    const { email, password } = req.body;
+
+    // hashed pasword need to compare
+
+    const admin = await adminModel.findOne({
+        email: email,
+        password: password
+    });
+
+    if (admin){
+        const token = jwt.sign({
+            id: admin._id
+        }, JWT_ADMIN_PASSWORD);
+
+        //need cookie logic
+
+        res.json({
+            token: token
+        })
+    } else {
+
+        res.status(403).json({
+            message:"incorrect credentials",
+        })
+    }
+})
+
+adminRouter.post("/course", adminMiddleware, async function(req, res){
+    const adminId = req.userId;
+
+    const {title, description, imageUrl, price} = req.body;
+
+    const course = await courseModel.create({
+        title: title,
+        description: description,
+        imageUrl: imageUrl,
+        price: price,
+        creatorId: adminId
+    })
+
+    res.json({
+        message:"Course created",
+        courseId: course._id
+    })
+})
+
+adminRouter.put("/course", adminMiddleware, async function(req, res){
+    const adminId = req.userId;
+
+    const {title, description, imageUrl, price, courseId} = req.body;
+
+    const course = await courseModel.updateOne({
+        _id: courseId,
+        creatorId: adminId
+    }, {
+        title: title,
+        description: description,
+        imageUrl: imageUrl,
+        price: price,
+    })
+
+    res.json({
+        message:"Course updated",
+        courseId: course._id
+    })
+})
+
+adminRouter.get("/course/bulk", adminMiddleware, async function(req, res){
+    const adminId = req.userId;
+
+    const courses = await courseModel.find({
+        creatorId: adminId
+    });
+
+    res.json({
+        message:"Course updated",
+        courses
+    })
+})
+
+module.exports = {
+    adminRouter: adminRouter
+}
+
+_____________________________________________________________________________
+
+▶️ course.js file
+
+const { Router } = require("express");
+const { userMiddleware } = require("../middleware/user");
+const { purchaseModel, courseModel } = require("../db");
+
+const courseRouter = Router();
+
+courseRouter.post("/purchase", userMiddleware, async function(req, res){
+    const userId = req.userId;
+    const courseId = req.body.courseId;
+
+    // check that user has actually paid the price
+    await purchaseModel.create({
+        userId,
+        courseId
+    });
+
+    res.json({
+        message:"You have successfully bought the course",
+    })
+})
+
+courseRouter.get("/preview", async function(req, res){
+
+    const courses = await courseModel.find({});
+    res.json({
+        courses
+    })
+})
+
+module.exports = {
+    courseRouter: courseRouter
+}
+
+_____________________________________________________________________________
+
+▶️ middleware/user.js
+
+const jwt = require("jsonwebtoken");
+const { JWT_ADMIN_PASSWORD } = require("../config");
+
+function adminMiddleware( res, req, next){
+    const token = req.headers.token;
+    const decoded = jwt.verify(token, JWT_ADMIN_PASSWORD);
+
+    if (decoded) {
+        req.userId = decoded.id;
+        next();
+    } else {
+        res.status(403).json({
+            message: "You are not signed in"
+        })
+    }
+};
+
+module.exports = {
+    adminMiddleware: adminMiddleware
+};
+_____________________________________________________________________________
+
+▶️ middleware/admin.js
+
+const jwt = require("jsonwebtoken");
+const { JWT_USER_PASSWORD } = require("../config");
+
+function userMiddleware( res, req, next){
+    const token = req.headers.token;
+    const decoded = jwt.verify(token, JWT_USER_PASSWORD);
+
+    if (decoded) {
+        req.userId = decoded.id;
+        next();
+    } else {
+        res.status(403).json({
+            message: "You are not signed in"
+        })
+    }
+};
+
+module.exports = {
+    userMiddleware: userMiddleware
+};
+_____________________________________________________________________________
